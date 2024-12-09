@@ -49,9 +49,11 @@ main(){
             echo "+--------------------------------------------------------------------------------------------------------------"
             echo "| $(tput setaf 1)GoldenGate Processes:$(tput sgr0)" Active Manager Process in the node:
 
-             # Verify Manager Processes in the host:
+            # Verify Manager Processes in the host:
             mgr=$(ps -ef | grep mgr | grep MGR | sort | awk -F'PARAMFILE ' '{print $2}')
-            echo -e "| $mgr"
+                echo "$mgr" | while IFS= read -r line; do
+                echo "| $line"
+            done
             echo "+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------+"
             echo "|                                                                       Oracle Services                                                                                 |"
             echo "+-----------------------+-----------------+-------------------------------------------------+--------------------------------------+------------------------------------+"
@@ -63,6 +65,7 @@ main(){
 
             # Iterate over each service and display the results side by side:
             for db in $pmondb; do
+                . oraenv <<< $db > /dev/null 2>&1
                 diskgroup=$(srvctl config database -d $db | grep "Disk Groups" | awk -F': ' '{print $2}')
                 oraclehome=$(srvctl config database -d $db | grep "Oracle home" | awk -F': ' '{print $2}')
                 fullversion=$($oraclehome/OPatch/opatch lsinventory | grep "Database Release Update" | head -n 1 | awk -F': ' '{print $3}' | sed 's/\"//g')
