@@ -63,15 +63,15 @@ main(){
             echo "+--------------------------------+-----------------------------+-------------------------------------------------+--------------------------------------+------------------------------------+"
 
             # Verify all the Process Monitor services in the host for Databases:
-            pmondb=$(ps -ef | grep smon | cut -c 60- | sed '$d' | grep -Ev "+ASM|osysmond.bin|auto|MG" | sort | sed 's/_[0-9]*$//')
+            pmondb=$(ps -ef | grep pmon | cut -c 60- | sed '$d' | grep -Ev "+ASM|osysmond.bin|auto|MG" | sort | sed 's/_[0-9]*$//')
 
             # Iterate over each service and display the results side by side:
             for db in $pmondb; do
                 . oraenv <<< $db > /dev/null 2>&1
-                diskgroup=$(srvctl config database -d $db | grep "Disk Groups" | awk -F': ' '{print $2}')
-                oraclehome=$(srvctl config database -d $db | grep "Oracle home" | awk -F': ' '{print $2}')
+                dbdiskgroup=$(srvctl config database -d $db | grep "Disk Groups" | awk -F': ' '{print $2}')
+                dboraclehome=$(srvctl config database -d $db | grep "Oracle home" | awk -F': ' '{print $2}')
                 dbtype=$(srvctl config database -d $db | grep "Type" | awk -F': ' '{print $2}')
-                fullversion=$($oraclehome/OPatch/opatch lsinventory | grep "Update" | head -n 1 | awk -F': ' '{print $3}' | sed 's/\"//g')
+                dbfullversion=$($dboraclehome/OPatch/opatch lsinventory | grep "Update" | head -n 1 | awk -F': ' '{print $3}' | sed 's/\"//g')
 
                 # Handle services, splitting each service onto a new line if there are multiple:
                 services=$(srvctl config service -d $db | grep "Service name" | awk -F': ' '{print $2}')
@@ -88,7 +88,7 @@ main(){
     
                     if [ -n "$status" ]; then
                         if [ $i -eq 0 ]; then
-                            printf "| %-30s | %-27s | %-47s | %-36s | %-34s |\n" "$db - $dbtype" "$diskgroup" "$service" "$oraclehome" "$fullversion"
+                            printf "| %-30s | %-27s | %-47s | %-36s | %-34s |\n" "$db - $dbtype" "$dbdiskgroup" "$service" "$dboraclehome" "$dbfullversion"
                         else
                             printf "| %-30s | %-27s | %-47s | %-36s | %-34s |\n" "" "" "$service" "" ""                    
                         fi
@@ -101,12 +101,22 @@ main(){
             # List the Grid Services in the host:
             echo "+------------------------------------------------------------------------------------------------------------------------------------------------------------------+"
             echo "|                                                                        Grid Services                                                                             |"
-            echo "+----------------------------+------------------------------------+---------------------------------------------------------+--------------------------------------+"
+            echo "+----------------------------+-----------------------------------------------------------+----------------------------------+--------------------------------------+"
             echo "| PMON Active Grid Processes | State Diskgroups - Oracle Database - Cluster Oracle - RAC | Grid Home - Active Grid Database | Grid Release - Grid Database Release |"
             echo "+----------------------------+-----------------------------------------------------------+----------------------------------+--------------------------------------+"
 
             # Verify all the Process Monitor services in the host for Grid:
-            pmongrid=$(ps -ef | grep smon | cut -c 60- | sed '$d' | grep ASM | sort | sed 's/[0-9]*$//')
+            pmongrid=$(ps -ef | grep pmon | cut -c 58- | sed '$d' | grep ASM | sort | sed 's/[0-9]*$//')
+
+            # Iterate over each service and display the results side by side:
+            for grid in $pmongrid; do
+                griddiskgroup=$(srvctl status diskgroup -diskgroup $diskgroup)
+                gridhome=$(cat /etc/oratab | grep "$pmongrid" | awk -F':' '{print $2}' | cut -d' ' -f1)
+                gridfullversion=$($gridhome/OPatch/opatch lsinventory | grep "Update" | head -n 1 | awk -F': ' '{print $3}' | sed 's/\"//g')
+            done
+
+            # Return the Grid Services information:
+            printf "| %-30s | %-27s | %-47s | %-36s | %-34s |\n" "$pmongrid - $griddiskgroup" "$gridhome" "$gridfullversion"
 }
 
 # Execution logfile:
