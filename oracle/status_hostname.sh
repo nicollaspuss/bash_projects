@@ -28,7 +28,7 @@ hostinfo(){
     Architecture=$(lscpu | grep "Architecture" | cut -c 24-)
     VCPUs=$(cat /proc/cpuinfo | grep processor | wc -l)
     Memory=$(cat /proc/meminfo | grep MemTotal | awk '{print int($2/1024/1024*100)/100 " GB"}')
-    Serverpool=$(/grid/product/19.17.0.0.0/bin/crsctl status serverpool | grep NAME | awk -F= '{print $2}')
+    Serverpool=$(/grid/product/19.17.0.0.0/bin/crsctl status serverpool | grep NAME | awk -F= '{print $2}' | grep -v -E '^(Free|Generic)$' | sed 's/^ora.//')
 }
 
 # Main function:
