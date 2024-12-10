@@ -28,7 +28,7 @@ hostinfo(){
     architecture=$(lscpu | grep "Architecture" | cut -c 24-)
     vcpus=$(cat /proc/cpuinfo | grep processor | wc -l)
     memory=$(cat /proc/meminfo | grep MemTotal | awk '{print int($2/1024/1024*100)/100 "gb"}')
-    serverpool=$(/grid/product/19.17.0.0.0/bin/crsctl status serverpool | grep NAME | awk -F= '{print $2}' | grep -Ev "Free|Generic" | sed 's/^ora.//')
+    serverpool=$(/grid/product/12.1.0.2/bin/crsctl status serverpool | grep NAME | awk -F= '{print $2}' | grep -Ev "Free|Generic" | sed 's/^ora.//')
 }
 
 # Main function:
@@ -76,21 +76,21 @@ main(){
                 # Handle services, splitting each service onto a new line if there are multiple:
                 services=$(srvctl config service -d $db | grep "Service name" | awk -F': ' '{print $2}')
                 cardinalities=$(srvctl config service -d $db | grep "Cardinality" | awk -F': ' '{print $2}')
-    
+
                 IFS=$'\n' read -rd '' -a service_array <<<"$services"
                 IFS=$'\n' read -rd '' -a cardinality_array <<<"$cardinalities"
 
                 for i in "${!service_array[@]}"; do
                     service="${service_array[$i]} - ${cardinality_array[$i]}"
-        
+
                     # Check if the service is running
                     status=$(srvctl status service -d $db -s ${service_array[$i]} | grep "is running" || true)
-    
+
                     if [ -n "$status" ]; then
                         if [ $i -eq 0 ]; then
                             printf "| %-30s | %-27s | %-47s | %-36s | %-34s |\n" "$db - $dbtype" "$dbdiskgroup" "$service" "$dboraclehome" "$dbfullversion"
                         else
-                            printf "| %-30s | %-27s | %-47s | %-36s | %-34s |\n" "" "" "$service" "" ""                    
+                            printf "| %-30s | %-27s | %-47s | %-36s | %-34s |\n" "" "" "$service" "" ""
                         fi
                     fi
                 done
@@ -106,17 +106,17 @@ main(){
             echo "+----------------------------+-----------------------------------------------------------+----------------------------------+--------------------------------------+"
 
             # Verify all the Process Monitor services in the host for Grid:
-            pmongrid=$(ps -ef | grep pmon | cut -c 58- | sed '$d' | grep ASM | sort | sed 's/[0-9]*$//')
+            pmongrid=$(ps -ef | grep pmon | cut -c 60- | sed '$d' | grep ASM | sort | sed 's/[0-9]*$//')
 
             # Iterate over each service and display the results side by side:
             for grid in $pmongrid; do
-                griddiskgroup=$(srvctl status diskgroup -diskgroup $diskgroup)
+                griddiskgroup=$(srvctl status diskgroup -diskgroup "$dbdiskgroup")
                 gridhome=$(cat /etc/oratab | grep "$pmongrid" | awk -F':' '{print $2}' | cut -d' ' -f1)
                 gridfullversion=$($gridhome/OPatch/opatch lsinventory | grep "Update" | head -n 1 | awk -F': ' '{print $3}' | sed 's/\"//g')
             done
 
             # Return the Grid Services information:
-            printf "| %-30s | %-27s | %-47s | %-36s | %-34s |\n" "$pmongrid - $griddiskgroup" "$gridhome" "$gridfullversion"
+            printf "| %-30s | %-27s | %-47s | %-36s |\n" "$pmongrid - $griddiskgroup" "$gridhome" "$gridfullversion"
 }
 
 # Execution logfile:
